@@ -1,19 +1,33 @@
 # n8n Deployment and Workflow Guide for Students
 
-This guide explains how to deploy **n8n** locally using **Podman**, manage your project with **Git**, and run **Telegram Bot workflow examples** safely. Instructions cover **Windows (WSL2)** and **Linux** users.
+## Table of Contents
+
+1. [Project Description](#project-description)
+2. [Install Podman](#install-podman)  
+3. [Install Git](#install-git)  
+4. [Initialize Git Project from Template](#initialize-git-project-from-template)
+5. [Environment Variables](#environment-variables)
+6. [Deploy n8n](#deploy-n8n)  
+7. [Import Workflow Examples](#import-workflow-examples)
+8. [Run Workflows](#run-workflows)
+9. [Container Logs](#container-logs)
+10. [Common Issues](#common-issues)
+11. [Notes for Students](#notes-for-students)
 
 ---
 
-## Table of Contents
+## Project Description
 
-1. [Install Podman](#install-podman)  
-2. [Install Git](#install-git)  
-3. [Initialize Git Project from Template](#initialize-git-project-from-template)  
-4. [Deploy n8n](#deploy-n8n)  
-5. [Launching Workflow Examples](#launching-workflow-examples)  
-   - [Prepare `.env` File](#prepare-env-file)  
-   - [Import Workflow Examples](#import-workflow-examples)  
-   - [Run Workflows](#run-workflows)  
+This repository contains materials for a low-code automation course based on **n8n**.
+
+The course focuses on:
+
+- building automation workflows in n8n;
+- integrating external APIs;
+- running n8n using containers with **Podman**;
+- working with databases from workflows.
+
+Ready-made example workflows are stored in the `workflows` directory and can be imported into your own n8n instance for learning and experimentation.
 
 ---
 
@@ -90,11 +104,12 @@ my-n8n-project/
 ├─ exercises/                 # Student exercises
 ├─ final_project/             # Final project folder
 ├─ n8n.env.example            # Template .env with dummy placeholders
+├─ docker-compose.yml         # Docker compose file
 ```
 
 ---
 
-## Deploy n8n
+## Environment Variables
 
 1. Navigate to your project folder:
 
@@ -110,16 +125,7 @@ nano .env
 # Fill in N8N_BASIC_AUTH_PASSWORD, TELEGRAM_BOT_TOKEN, DB_POSTGRESDB_PASSWORD
 ```
 
-3. Start Podman containers:
-
-```bash
-podman-compose up -d
-podman-compose logs -f n8n
-```
-
-4. Open n8n in browser: [http://localhost:5678](http://localhost:5678)
-
-5. Install ngrok:
+3. Install ngrok:
 
 ```bash
 curl -fsSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
@@ -130,49 +136,48 @@ sudo apt update
 sudo apt install ngrok
 ```
 
-6. Sign up at [https://ngrok.com](https://ngrok.com) and copy your auth token.
+4. Sign up at [https://ngrok.com](https://ngrok.com) and copy your auth token.
 
-7. Then run:
+5. Then run:
 
 ```bash
 ngrok config add-authtoken YOUR_TOKEN_HERE
 ```
 
-8. Expose a local port:
+6. Expose a local port:
 
 ```bash
 ngrok http 5678
 ```
 
-9. Update WEBHOOK_URL in .env and restart Podman containers:
-
-```bash
-podman-compose down
-podman-compose up -d
-```
+7. Update WEBHOOK_URL in .env
 
 ---
 
-## Launching Workflow Examples
+## Deploy n8n
 
-### Prepare `.env` File
-
-1. Copy template:
-
-```bash
-cp n8n.env.example .env
-```
-
-2. Fill in real secrets (n8n auth, PostgreSQL, Telegram bot token).  
-3. Start containers:
+1. Start Podman containers:
 
 ```bash
 podman-compose up -d
+podman-compose logs -f n8n
 ```
+
+2. Open n8n in browser: [http://localhost:5678](http://localhost:5678)
 
 ---
 
-### Import Workflow Examples
+## Import Workflow Examples
+
+Prepared workflows are available in the repository in the `workflows` folder.
+
+They demonstrate:
+
+- HTTP triggers;
+- API integrations;
+- PostgreSQL writes;
+- workflow execution logging;
+- data processing pipelines.
 
 1. Open n8n → Workflows → Import from JSON.  
 2. Import the files from `workflows/`:
@@ -182,7 +187,34 @@ podman-compose up -d
 
 ---
 
-### Run Workflows
+### PostgreSQL Setup (Database Schema)
+
+Some example workflows log execution data into PostgreSQL.  
+For this purpose, create the following table:
+
+```sql
+CREATE TABLE telegram_logs (
+    id SERIAL PRIMARY KEY,
+    chat_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    message_text JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Table Description
+
+| Column | Purpose |
+|------|--------|
+| id | Unique identifier |
+| chat_id | Unique identifier of the chat |
+| user_name | Name of user |
+| message_text | Message |
+| created_at | Record creation time |
+
+---
+
+## Run Workflows
 
 1. Make sure containers are running:
 
@@ -195,8 +227,42 @@ podman-compose ps
 4. Verify logs in PostgreSQL (table `telegram_logs`):
 
 ```sql
-SELECT * FROM telegram_logs;
+SELECT *
+FROM telegram_logs
+ORDER BY created_at DESC;
 ```
+
+---
+
+## Container Logs
+
+```bash
+podman logs n8n
+```
+
+```bash
+podman-compose logs n8n
+```
+
+```bash
+podman logs postgres
+```
+
+---
+
+## Common Issues
+
+**❌ n8n cannot connect to PostgreSQL**
+
+- verify service name is `postgres`
+- confirm credentials
+- inspect logs
+
+**❌ Workflow does not write data**
+
+- check credentials in n8n
+- ensure table exists
+- test SQL manually
 
 ---
 
