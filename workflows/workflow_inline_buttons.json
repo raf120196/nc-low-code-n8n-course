@@ -4,15 +4,16 @@
         {
             "parameters": {
                 "updates": [
-                    "message"
+                    "message",
+                    "callback_query"
                 ]
             },
             "name": "Telegram Trigger",
             "type": "n8n-nodes-base.telegramTrigger",
             "typeVersion": 1,
             "position": [
-                200,
-                300
+                -320,
+                128
             ],
             "credentials": {
                 "telegramApi": {
@@ -36,8 +37,8 @@
             "type": "n8n-nodes-base.set",
             "typeVersion": 1,
             "position": [
-                450,
-                300
+                240,
+                208
             ]
         },
         {
@@ -72,8 +73,8 @@
             "type": "n8n-nodes-base.telegram",
             "typeVersion": 1,
             "position": [
-                700,
-                300
+                496,
+                208
             ],
             "credentials": {
                 "telegramApi": {
@@ -84,23 +85,35 @@
         },
         {
             "parameters": {
-                "updates": [
-                    "callback_query"
-                ]
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.callback_query }}",
+                            "rightValue": "undefined",
+                            "operator": {
+                                "type": "object",
+                                "operation": "exists",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
             },
-            "name": "Telegram Callback Trigger",
-            "type": "n8n-nodes-base.telegramTrigger",
-            "typeVersion": 1,
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
             "position": [
-                200,
-                600
+                -64,
+                128
             ],
-            "credentials": {
-                "telegramApi": {
-                    "id": "tJ79p3FBisUVY8QN",
-                    "name": "Telegram account"
-                }
-            }
+            "name": "IF json.callbackQuery exists"
         },
         {
             "parameters": {
@@ -125,8 +138,8 @@
             "type": "n8n-nodes-base.set",
             "typeVersion": 1,
             "position": [
-                450,
-                600
+        240,
+        32
             ]
         },
         {
@@ -205,8 +218,8 @@
             "type": "n8n-nodes-base.postgres",
             "typeVersion": 2.6,
             "position": [
-                700,
-                600
+        496,
+        32
             ],
             "name": "PostgreSQL Insert Callback",
             "credentials": {
@@ -226,8 +239,8 @@
             "type": "n8n-nodes-base.telegram",
             "typeVersion": 1,
             "position": [
-                950,
-                600
+        736,
+        32
             ],
             "id": "6004510f-05ae-4474-80fe-ffc8da4fd39e",
             "webhookId": "59ed0504-9a18-49bc-8e65-32d4eec7ebdf",
@@ -244,7 +257,7 @@
             "main": [
                 [
                     {
-                        "node": "Prepare Message Data",
+                        "node": "IF json.callbackQuery exists",
                         "type": "main",
                         "index": 0
                     }
@@ -262,11 +275,18 @@
                 ]
             ]
         },
-        "Telegram Callback Trigger": {
+        "IF json.callbackQuery exists": {
             "main": [
                 [
                     {
                         "node": "Prepare Callback Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Prepare Message Data",
                         "type": "main",
                         "index": 0
                     }
