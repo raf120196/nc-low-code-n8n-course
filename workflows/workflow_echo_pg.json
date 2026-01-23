@@ -1,65 +1,143 @@
 {
-  "name": "Telegram Bot Echo + Log",
-  "nodes": [
-    {
-      "parameters": {
-        "botToken": "={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "updateMode": "webhook",
-        "options": {}
-      },
-      "name": "Telegram Trigger",
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1,
-      "position": [200, 300]
-    },
-    {
-      "parameters": {
-        "values": {
-          "string": [
-            { "name": "chatId", "value": "={{ $json[\"message\"][\"chat\"][\"id\"] }}" },
-            { "name": "messageText", "value": "={{ $json[\"message\"][\"text\"] }}" },
-            { "name": "userName", "value": "={{ $json[\"message\"][\"from\"][\"username\"] || $json[\"message\"][\"from\"][\"first_name\"] }}" },
-            { "name": "replyText", "value": "Received your message: {{$json[\"message\"][\"text\"]}}" }
-          ]
+    "name": "Telegram Bot Echo + Log",
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "name": "Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "chatId",
+                            "value": "={{ $json[\"message\"][\"chat\"][\"id\"] }}"
+                        },
+                        {
+                            "name": "messageText",
+                            "value": "={{ $json[\"message\"][\"text\"] }}"
+                        },
+                        {
+                            "name": "userName",
+                            "value": "={{ $json[\"message\"][\"from\"][\"username\"] || $json[\"message\"][\"from\"][\"first_name\"] }}"
+                        },
+                        {
+                            "name": "replyText",
+                            "value": "Received your message: {{$json[\"message\"][\"text\"]}}"
+                        }
+                    ]
+                }
+            },
+            "name": "Prepare Data",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "insert",
+                "schema": "public",
+                "table": "telegram_logs_example_one",
+                "columns": [
+                    "chat_id",
+                    "user_name",
+                    "message_text"
+                ],
+                "values": [
+                    {
+                        "column": "chat_id",
+                        "value": "={{$json[\"chatId\"]}}"
+                    },
+                    {
+                        "column": "user_name",
+                        "value": "={{$json[\"userName\"]}}"
+                    },
+                    {
+                        "column": "message_text",
+                        "value": "={{$json[\"messageText\"]}}"
+                    }
+                ]
+            },
+            "name": "PostgreSQL Insert",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 1,
+            "position": [
+                700,
+                200
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "S5CTSOa31myXvoxJ",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json[\"chatId\"] }}",
+                "text": "={{ $json[\"replyText\"] }}"
+            },
+            "name": "Telegram Reply",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                700,
+                400
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
         }
-      },
-      "name": "Prepare Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [450, 300]
-    },
-    {
-      "parameters": {
-        "operation": "insert",
-        "schema": "",
-        "table": "telegram_logs",
-        "columns": ["chat_id","user_name","message_text"],
-        "values": [
-          {"column":"chat_id","value":"={{$json[\"chatId\"]}}"},
-          {"column":"user_name","value":"={{$json[\"userName\"]}}"},
-          {"column":"message_text","value":"={{$json[\"messageText\"]}}"}
-        ]
-      },
-      "name": "PostgreSQL Insert",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 1,
-      "position": [700, 200],
-      "credentials": { "postgres": { "id": "1", "name": "n8n_postgres" } }
-    },
-    {
-      "parameters": {
-        "botToken": "={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "chatId": "={{ $json[\"chatId\"] }}",
-        "text": "={{ $json[\"replyText\"] }}"
-      },
-      "name": "Telegram Reply",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [700, 400]
+    ],
+    "connections": {
+        "Telegram Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Data": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL Insert",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Telegram Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
     }
-  ],
-  "connections": {
-    "Telegram Trigger": { "main":[[{"node":"Prepare Data","type":"main","index":0}]] },
-    "Prepare Data": { "main":[[{"node":"PostgreSQL Insert","type":"main","index":0},{"node":"Telegram Reply","type":"main","index":0}]] }
-  }
 }

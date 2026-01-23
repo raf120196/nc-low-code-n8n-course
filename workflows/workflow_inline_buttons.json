@@ -1,112 +1,252 @@
 {
-  "name": "Telegram Bot Inline Buttons Log",
-  "nodes": [
-    {
-      "parameters": {
-        "botToken": "={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "updateMode": "webhook",
-        "options": {}
-      },
-      "name": "Telegram Trigger",
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1,
-      "position": [200, 300]
-    },
-    {
-      "parameters": {
-        "values": {
-          "string": [
-            {"name":"chatId","value":"={{ $json[\"message\"][\"chat\"][\"id\"] }}"},
-            {"name":"messageText","value":"={{ $json[\"message\"][\"text\"] }}"},
-            {"name":"userName","value":"={{ $json[\"message\"][\"from\"][\"username\"] || $json[\"message\"][\"from\"][\"first_name\"] }}"}
-          ]
-        }
-      },
-      "name": "Prepare Message Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [450, 300]
-    },
-    {
-      "parameters": {
-        "botToken": "={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "chatId": "={{ $json[\"chatId\"] }}",
-        "text": "Choose an option:",
-        "options": {
-          "replyMarkup": {
-            "inline_keyboard": [
-              [{"text":"Option 1","callback_data":"option_1"},{"text":"Option 2","callback_data":"option_2"}]
+    "name": "Telegram Bot Inline Buttons Log",
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "name": "Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "chatId",
+                            "value": "={{ $json[\"message\"][\"chat\"][\"id\"] }}"
+                        },
+                        {
+                            "name": "messageText",
+                            "value": "={{ $json[\"message\"][\"text\"] }}"
+                        },
+                        {
+                            "name": "userName",
+                            "value": "={{ $json[\"message\"][\"from\"][\"username\"] || $json[\"message\"][\"from\"][\"first_name\"] }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Prepare Message Data",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
             ]
-          }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json[\"chatId\"] }}",
+                "text": "Choose an option:",
+                "options": {
+                    "replyMarkup": {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": "Option 1",
+                                    "callback_data": "option_1"
+                                },
+                                {
+                                    "text": "Option 2",
+                                    "callback_data": "option_2"
+                                }
+                            ]
+                        ]
+                    }
+                }
+            },
+            "name": "Send Inline Buttons",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "name": "Telegram Callback Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                600
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "chatId",
+                            "value": "={{ $json[\"callback_query\"][\"message\"][\"chat\"][\"id\"] }}"
+                        },
+                        {
+                            "name": "userName",
+                            "value": "={{ $json[\"callback_query\"][\"from\"][\"username\"] || $json[\"callback_query\"][\"from\"][\"first_name\"] }}"
+                        },
+                        {
+                            "name": "originalMessage",
+                            "value": "={{ $json[\"callback_query\"][\"message\"][\"text\"] }}"
+                        },
+                        {
+                            "name": "buttonClicked",
+                            "value": "={{ $json[\"callback_query\"][\"data\"] }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Prepare Callback Data",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                450,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "insert",
+                "schema": "public",
+                "table": "telegram_logs_example_two",
+                "columns": [
+                    "chat_id",
+                    "user_name",
+                    "message_text",
+                    "button_clicked"
+                ],
+                "values": [
+                    {
+                        "column": "chat_id",
+                        "value": "={{$json[\"chatId\"]}}"
+                    },
+                    {
+                        "column": "user_name",
+                        "value": "={{$json[\"userName\"]}}"
+                    },
+                    {
+                        "column": "message_text",
+                        "value": "={{$json[\"originalMessage\"]}}"
+                    },
+                    {
+                        "column": "button_clicked",
+                        "value": "={{$json[\"buttonClicked\"]}}"
+                    }
+                ]
+            },
+            "name": "PostgreSQL Insert Callback",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 1,
+            "position": [
+                700,
+                600
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "S5CTSOa31myXvoxJ",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json[\"chatId\"] }}",
+                "text": "You clicked: {{$json[\"buttonClicked\"]}}"
+            },
+            "name": "Reply Button Click",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                950,
+                600
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "tJ79p3FBisUVY8QN",
+                    "name": "Telegram account"
+                }
+            }
         }
-      },
-      "name": "Send Inline Buttons",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [700, 300]
-    },
-    {
-      "parameters": {
-        "botToken": "={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "updateMode": "webhook",
-        "options": {}
-      },
-      "name": "Telegram Callback Trigger",
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1,
-      "position": [200, 600]
-    },
-    {
-      "parameters": {
-        "values": {
-          "string": [
-            {"name":"chatId","value":"={{ $json[\"callback_query\"][\"message\"][\"chat\"][\"id\"] }}"},
-            {"name":"userName","value":"={{ $json[\"callback_query\"][\"from\"][\"username\"] || $json[\"callback_query\"][\"from\"][\"first_name\"] }}"},
-            {"name":"originalMessage","value":"={{ $json[\"callback_query\"][\"message\"][\"text\"] }}"},
-            {"name":"buttonClicked","value":"={{ $json[\"callback_query\"][\"data\"] }}"}
-          ]
+    ],
+    "connections": {
+        "Telegram Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Message Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Message Data": {
+            "main": [
+                [
+                    {
+                        "node": "Send Inline Buttons",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Telegram Callback Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Callback Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Callback Data": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL Insert Callback",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Reply Button Click",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
-      },
-      "name": "Prepare Callback Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [450, 600]
-    },
-    {
-      "parameters": {
-        "operation":"insert",
-        "schema":"",
-        "table":"telegram_logs",
-        "columns":["chat_id","user_name","message_text","button_clicked"],
-        "values":[
-          {"column":"chat_id","value":"={{$json[\"chatId\"]}}"},
-          {"column":"user_name","value":"={{$json[\"userName\"]}}"},
-          {"column":"message_text","value":"={{$json[\"originalMessage\"]}}"},
-          {"column":"button_clicked","value":"={{$json[\"buttonClicked\"]}}"}
-        ]
-      },
-      "name": "PostgreSQL Insert Callback",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 1,
-      "position": [700, 600],
-      "credentials": { "postgres": {"id":"1","name":"n8n_postgres"} }
-    },
-    {
-      "parameters": {
-        "botToken":"={{ $env.TELEGRAM_BOT_TOKEN }}",
-        "chatId":"={{ $json[\"chatId\"] }}",
-        "text":"You clicked: {{$json[\"buttonClicked\"]}}"
-      },
-      "name":"Reply Button Click",
-      "type":"n8n-nodes-base.telegram",
-      "typeVersion":1,
-      "position":[950,600]
     }
-  ],
-  "connections": {
-    "Telegram Trigger":{"main":[[{"node":"Prepare Message Data","type":"main","index":0}]]},
-    "Prepare Message Data":{"main":[[{"node":"Send Inline Buttons","type":"main","index":0}]]},
-    "Telegram Callback Trigger":{"main":[[{"node":"Prepare Callback Data","type":"main","index":0}]]},
-    "Prepare Callback Data":{"main":[[{"node":"PostgreSQL Insert Callback","type":"main","index":0},{"node":"Reply Button Click","type":"main","index":0}]]}
-  }
 }
