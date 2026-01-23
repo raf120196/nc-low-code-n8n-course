@@ -32,10 +32,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: >
-      sh -c "
-      n8n start & \
-      ngrok http 5678 --log=stdout"
     depends_on:
       - postgres
     ports:

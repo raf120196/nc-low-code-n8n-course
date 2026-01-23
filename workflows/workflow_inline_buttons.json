@@ -27,15 +27,7 @@
                     "string": [
                         {
                             "name": "chatId",
-                            "value": "={{ $json[\"message\"][\"chat\"][\"id\"] }}"
-                        },
-                        {
-                            "name": "messageText",
-                            "value": "={{ $json[\"message\"][\"text\"] }}"
-                        },
-                        {
-                            "name": "userName",
-                            "value": "={{ $json[\"message\"][\"from\"][\"username\"] || $json[\"message\"][\"from\"][\"first_name\"] }}"
+                            "value": "={{ $json.message.chat.id }}"
                         }
                     ]
                 }
@@ -50,23 +42,30 @@
         },
         {
             "parameters": {
-                "chatId": "={{ $json[\"chatId\"] }}",
+                "chatId": "={{ $json.chatId }}",
                 "text": "Choose an option:",
-                "options": {
-                    "replyMarkup": {
-                        "inline_keyboard": [
-                            [
-                                {
-                                    "text": "Option 1",
-                                    "callback_data": "option_1"
-                                },
-                                {
-                                    "text": "Option 2",
-                                    "callback_data": "option_2"
-                                }
-                            ]
-                        ]
-                    }
+                "replyMarkup": "inlineKeyboard",
+                "inlineKeyboard": {
+                    "rows": [
+                        {
+                            "row": {
+                                "buttons": [
+                                    {
+                                        "text": "Red pill",
+                                        "additionalFields": {
+                                            "callback_data": "option_1"
+                                        }
+                                    },
+                                    {
+                                        "text": "Blue pill",
+                                        "additionalFields": {
+                                            "callback_data": "option_2"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             },
             "name": "Send Inline Buttons",
@@ -86,7 +85,7 @@
         {
             "parameters": {
                 "updates": [
-                    "message"
+                    "callback_query"
                 ]
             },
             "name": "Telegram Callback Trigger",
@@ -109,19 +108,15 @@
                     "string": [
                         {
                             "name": "chatId",
-                            "value": "={{ $json[\"callback_query\"][\"message\"][\"chat\"][\"id\"] }}"
+                            "value": "={{ $json.callback_query.message.chat.id }}"
                         },
                         {
                             "name": "userName",
-                            "value": "={{ $json[\"callback_query\"][\"from\"][\"username\"] || $json[\"callback_query\"][\"from\"][\"first_name\"] }}"
-                        },
-                        {
-                            "name": "originalMessage",
-                            "value": "={{ $json[\"callback_query\"][\"message\"][\"text\"] }}"
+                            "value": "={{ $json.callback_query.message.chat.first_name }}"
                         },
                         {
                             "name": "buttonClicked",
-                            "value": "={{ $json[\"callback_query\"][\"data\"] }}"
+                            "value": "={{ $json.callback_query.data }}"
                         }
                     ]
                 }
@@ -136,52 +131,96 @@
         },
         {
             "parameters": {
-                "operation": "insert",
-                "schema": "public",
-                "table": "telegram_logs_example_two",
-                "columns": [
-                    "chat_id",
-                    "user_name",
-                    "message_text",
-                    "button_clicked"
-                ],
-                "values": [
-                    {
-                        "column": "chat_id",
-                        "value": "={{$json[\"chatId\"]}}"
+                "schema": {
+                    "mode": "name",
+                    "value": "public"
+                },
+                "table": {
+                    "mode": "name",
+                    "value": "telegram_logs"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "chat_id": "={{ $json.chatId }}",
+                        "user_name": "={{ $json.userName }}",
+                        "button_clicked": "={{ $json.buttonClicked }}"
                     },
-                    {
-                        "column": "user_name",
-                        "value": "={{$json[\"userName\"]}}"
-                    },
-                    {
-                        "column": "message_text",
-                        "value": "={{$json[\"originalMessage\"]}}"
-                    },
-                    {
-                        "column": "button_clicked",
-                        "value": "={{$json[\"buttonClicked\"]}}"
-                    }
-                ]
+                    "matchingColumns": [
+                        "id"
+                    ],
+                    "schema": [
+                        {
+                            "id": "id",
+                            "displayName": "id",
+                            "required": false,
+                            "defaultMatch": true,
+                            "display": true,
+                            "type": "number",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        },
+                        {
+                            "id": "chat_id",
+                            "displayName": "chat_id",
+                            "required": true,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "number",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "user_name",
+                            "displayName": "user_name",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "button_clicked",
+                            "displayName": "button_clicked",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "created_at",
+                            "displayName": "created_at",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "dateTime",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                }
             },
-            "name": "PostgreSQL Insert Callback",
             "type": "n8n-nodes-base.postgres",
-            "typeVersion": 1,
+            "typeVersion": 2.6,
             "position": [
                 700,
                 600
             ],
+            "name": "PostgreSQL Insert Callback",
             "credentials": {
                 "postgres": {
-                    "id": "S5CTSOa31myXvoxJ",
+                    "id": "kfz3jqjvz5xbmQt5",
                     "name": "Postgres account"
                 }
             }
         },
         {
             "parameters": {
-                "chatId": "={{ $json[\"chatId\"] }}",
-                "text": "You clicked: {{$json[\"buttonClicked\"]}}"
+                "chatId": "={{ $json.chatId }}",
+                "text": "=Hi, {{ $json.userName }}! You chose {{ $json.buttonClicked == \"option_1\" ? \"a learning an unsettling or life-changing truth by taking the red pill\" : \"a remaining in the unquestioned experience of an illusion appearing as ordinary reality with the blue pill\" }}.",
+                "additionalFields": {}
             },
             "name": "Reply Button Click",
             "type": "n8n-nodes-base.telegram",
@@ -190,9 +229,11 @@
                 950,
                 600
             ],
+            "id": "6004510f-05ae-4474-80fe-ffc8da4fd39e",
+            "webhookId": "59ed0504-9a18-49bc-8e65-32d4eec7ebdf",
             "credentials": {
                 "telegramApi": {
-                    "id": "tJ79p3FBisUVY8QN",
+                    "id": "FP1Gzr1DfdmOIbYE",
                     "name": "Telegram account"
                 }
             }

@@ -3,11 +3,11 @@
 ## Table of Contents
 
 1. [Project Description](#project-description)
-2. [Install Podman](#install-podman)  
-3. [Install Git](#install-git)  
+2. [Install Podman](#install-podman)
+3. [Install Git](#install-git)
 4. [Initialize Git Project from Template](#initialize-git-project-from-template)
 5. [Environment Variables](#environment-variables)
-6. [Deploy n8n](#deploy-n8n)  
+6. [Deploy n8n](#deploy-n8n)
 7. [Import Workflow Examples](#import-workflow-examples)
 8. [Run Workflows](#run-workflows)
 9. [Container Logs](#container-logs)
@@ -42,8 +42,8 @@ wsl --install
 wsl --set-default-version 2
 ```
 
-2. Install Ubuntu 20.04 or 22.04 from Microsoft Store.  
-3. Install **Podman Desktop**: [https://podman.io/getting-started/installation](https://podman.io/getting-started/installation)  
+2. Install Ubuntu 20.04 or 22.04 from Microsoft Store.
+3. Install **Podman Desktop**: [https://podman.io/getting-started/installation](https://podman.io/getting-started/installation)
 4. Initialize Podman machine:
 
 ```powershell
@@ -94,20 +94,50 @@ git clone https://github.com/YOUR_ACCOUNT/nc-low-code-n8n-course.git my-n8n-proj
 cd my-n8n-project
 ```
 
-3. Folder structure:
-
-```
-my-n8n-project/
-├─ README.md                  # This guide
-├─ .gitignore                 # Ignore .env and logs
-├─ workflows/                 # Example workflows
-├─ exercises/                 # Student exercises
-├─ final_project/             # Final project folder
-├─ n8n.env.example            # Template .env with dummy placeholders
-├─ docker-compose.yml         # Docker compose file
-```
-
 ---
+
+## Install ngrok
+
+1. Install ngrok
+
+```bash
+curl -fsSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+| sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+| sudo tee /etc/apt/sources.list.d/ngrok.list
+sudo apt update
+sudo apt install ngrok
+```
+
+2. Sign up at [https://ngrok.com](https://ngrok.com) and copy your auth token.
+
+3. Add your auth token in ngrok configuration:
+
+```bash
+ngrok config add-authtoken YOUR_TOKEN_HERE
+```
+
+4. Open tmux session for ngrok:
+
+```bash
+tmux new -s ngrok
+```
+
+5. Expose a local port:
+
+```bash
+ngrok http 5678
+```
+
+6. Copy forwarding URL. It will be your WEBHOOK_URL.
+
+7. Detach tmux session: click Ctrl+B and then D
+
+## Create Telegram Bot
+
+1. Open @BotFather and create new bot.
+
+2. Copy access token of your bot. It will be your TELEGRAM_BOT_TOKEN.
 
 ## Environment Variables
 
@@ -122,35 +152,8 @@ cd ~/my-n8n-project
 ```bash
 cp n8n.env.example .env
 nano .env
-# Fill in N8N_BASIC_AUTH_PASSWORD, TELEGRAM_BOT_TOKEN, DB_POSTGRESDB_PASSWORD
+# Fill in N8N_BASIC_AUTH_PASSWORD, DB_POSTGRESDB_PASSWORD, WEBHOOK_URL, TELEGRAM_BOT_TOKEN properties.
 ```
-
-3. Install ngrok:
-
-```bash
-curl -fsSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-| sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
-| sudo tee /etc/apt/sources.list.d/ngrok.list
-sudo apt update
-sudo apt install ngrok
-```
-
-4. Sign up at [https://ngrok.com](https://ngrok.com) and copy your auth token.
-
-5. Then run:
-
-```bash
-ngrok config add-authtoken YOUR_TOKEN_HERE
-```
-
-6. Expose a local port:
-
-```bash
-ngrok http 5678
-```
-
-7. Update WEBHOOK_URL in .env
 
 ---
 
@@ -160,18 +163,25 @@ ngrok http 5678
 
 ```bash
 podman-compose up -d
-podman-compose logs -f n8n
 ```
 
-2. Open n8n in browser: [http://localhost:5678](http://localhost:5678)
+2. Make sure containers are running:
+
+```bash
+podman-compose ps
+```
+
+3. Open PG Adminner [http://localhost:8080](http://localhost:8080/). Check that table `telegram_logs` exists.
+
+4. Open n8n in browser: [http://localhost:5678](http://localhost:5678)
 
 ---
 
-## Import Workflow Examples
+## Import Workflow Example
 
-Prepared workflows are available in the repository in the `workflows` folder.
+Prepared example workflow is available in the repository in the `workflows` folder.
 
-They demonstrate:
+It demonstrates:
 
 - HTTP triggers;
 - API integrations;
@@ -179,52 +189,23 @@ They demonstrate:
 - workflow execution logging;
 - data processing pipelines.
 
-1. Open n8n → Workflows → Import from JSON.  
-2. Import the files from `workflows/`:
+1. Sing in n8n.
 
-- `workflow_echo_pg.json` → logs Telegram messages to PostgreSQL and replies.  
-- `workflow_inline_buttons.json` → sends inline buttons and logs clicks.  
+2. Create Telegram API and Postgres credentials based on your TELEGRAM_BOT_TOKEN and PG DB connection settings in .env file.
 
----
+3. Import `workflow_inline_buttons.json` from `workflows/` folder.
 
-### PostgreSQL Setup (Database Schema)
-
-Some example workflows log execution data into PostgreSQL.  
-For this purpose, create the following table:
-
-```sql
-CREATE TABLE telegram_logs (
-    id SERIAL PRIMARY KEY,
-    chat_id TEXT NOT NULL,
-    user_name TEXT NOT NULL,
-    message_text JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Table Description
-
-| Column | Purpose |
-|------|--------|
-| id | Unique identifier |
-| chat_id | Unique identifier of the chat |
-| user_name | Name of user |
-| message_text | Message |
-| created_at | Record creation time |
+4. Open Telegram and Postgres nodes: n8n will automatically update credentials with your credentials.
 
 ---
 
 ## Run Workflows
 
-1. Make sure containers are running:
+1. Publish workflow.
 
-```bash
-podman-compose ps
-```
+2. Test your Telegram bot: send a message or click inline buttons.
 
-2. Open the workflow in n8n, toggle **Active**.  
-3. Test your Telegram bot: send a message or click inline buttons.  
-4. Verify logs in PostgreSQL (table `telegram_logs`):
+3. Verify logs in PostgreSQL:
 
 ```sql
 SELECT *
@@ -268,6 +249,6 @@ podman logs postgres
 
 ## Notes for Students
 
-- Always run **Git inside WSL/Ubuntu**, not native Windows Git.  
-- Never commit `.env` with real credentials; use `.env.example` for version control.  
-- Work on exercises in the `exercises/` folder and final project in `final_project/`. 
+- Always run **Git inside WSL/Ubuntu**, not native Windows Git.
+- Never commit `.env` with real credentials; use `.env.example` for version control.
+- Work on exercises in the `exercises/` folder and final project in `final_project/`.
