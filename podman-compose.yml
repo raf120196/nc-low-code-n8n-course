@@ -32,25 +32,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    command: >
+      sh -c "
+      n8n start & \
+      ngrok http 5678 --log=stdout"
     depends_on:
       - postgres
     ports:
       - "${N8N_PORT}:${N8N_PORT}"
     volumes:
       - n8n_data:/home/node/.n8n
-
-  ngrok:
-    image: docker.io/wernight/ngrok
-    depends_on:
-      - n8n
-    environment:
-      NGROK_PORT: "${N8N_PORT}"
-      NGROK_AUTHTOKEN: "${NGROK_AUTH_TOKEN}"
-      NGROK_HOST: 0.0.0.0
-    ports:
-      - "4040:4040"
-    command: "http n8n:${N8N_PORT}"
-    restart: unless-stopped
 
 volumes:
   pg_data:
