@@ -6,13 +6,15 @@
 2. [Install Podman](#install-podman)
 3. [Install Git](#install-git)
 4. [Initialize Git Project from Template](#initialize-git-project-from-template)
-5. [Environment Variables](#environment-variables)
-6. [Deploy n8n](#deploy-n8n)
-7. [Import Workflow Examples](#import-workflow-examples)
-8. [Run Workflows](#run-workflows)
-9. [Container Logs](#container-logs)
-10. [Common Issues](#common-issues)
-11. [Notes for Students](#notes-for-students)
+5. [Install ngrok](#install-ngrok)
+6. [Create Telegram Bot](#create-telegram-bot)
+7. [Environment Variables](#environment-variables)
+8. [Deploy n8n](#deploy-n8n)
+9. [Import Workflow Example](#import-workflow-example)
+10. [Run Workflow Example](#run-workflow-example)
+11. [Container Logs](#container-logs)
+12. [Common Issues](#common-issues)
+13. [Notes for Students](#notes-for-students)
 
 ---
 
@@ -199,7 +201,7 @@ It demonstrates:
 
 ---
 
-## Run Workflows
+## Run Workflow Example
 
 1. Publish workflow.
 
