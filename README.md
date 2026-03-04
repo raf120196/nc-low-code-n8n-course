@@ -27,7 +27,15 @@ The course focuses on:
 - building automation workflows in n8n;
 - integrating external APIs;
 - running n8n using containers with **Podman**;
-- working with databases from workflows.
+- working with databases from workflows;
+- implementing production-ready error handling and resilience patterns;
+- creating comprehensive technical documentation.
+
+**Course Structure:**
+
+- **6 weeks of theory and exercises** (in `theory/` and `exercises/` folders)
+- **Final project** (4-6 weeks): Build a production-ready telecom automation system
+- **Mock APIs** for local testing without external dependencies
 
 Ready-made example workflows are stored in the `workflows` directory and can be imported into your own n8n instance for learning and experimentation.
 
@@ -254,3 +262,60 @@ podman logs postgres
 - Always run **Git inside WSL/Ubuntu**, not native Windows Git.
 - Never commit `.env` with real credentials; use `.env.example` for version control.
 - Work on exercises in the `exercises/` folder and final project in `final_project/`.
+
+---
+
+## Final Project
+
+After completing the 6-week course, you'll build a comprehensive final project demonstrating all learned skills.
+
+**Requirements:**
+- 20-25 nodes across main workflow and sub-workflows
+- 3-4 system integrations (PostgreSQL, Telegram, Google Sheets, Mock APIs)
+- Separate error handling workflow
+- State machine with 4+ statuses
+- Comprehensive documentation and testing
+
+**See:** [`final_project/README.md`](final_project/README.md) for complete specifications.
+
+**Available Project Topics:**
+1. SIM Card Purchase & Activation System
+2. Home Internet/TV Provisioning System
+3. Telecom Support Bot with Smart Routing
+4. Network Outage Monitor & Alert System
+5. Automated Roaming Package Activation
+6. B2B Lead Management & Qualification System
+7. IoT Device Fleet Management System
+
+---
+
+## Mock APIs for Testing
+
+Four production-ready OpenAPI mock servers are provided in the `mock-apis/` directory for local testing:
+
+1. **Telecom CRM API** (Port 4010) - Customer management and validation
+2. **Billing System API** (Port 4011) - Payments and balance operations  
+3. **Network Management API** (Port 4012) - SIM provisioning, outages, roaming, IoT
+4. **Geolocation & Enrichment API** (Port 4013) - Geographic data and company information
+
+**Quick Start:**
+```bash
+# Install Prism
+npm install -g @stoplight/prism-cli
+
+# Start a mock server
+cd mock-apis
+prism mock telecom-crm/openapi.yaml --port 4010
+
+# Or use Docker Compose to start all mocks
+docker-compose up
+```
+
+**Features:**
+- Complete OpenAPI 3.0 specifications
+- Sunny day and rainy day scenarios
+- Special error triggers for testing
+- Interactive Swagger UI documentation
+- No authentication required
+
+**See:** [`mock-apis/README.md`](mock-apis/README.md) for detailed documentation.

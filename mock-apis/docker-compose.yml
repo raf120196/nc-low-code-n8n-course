@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  telecom-crm:
+    image: stoplight/prism:4
+    container_name: mock-telecom-crm
+    command: mock -h 0.0.0.0 /tmp/openapi.yaml
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./telecom-crm/openapi.yaml:/tmp/openapi.yaml:ro
+    environment:
+      - PRISM_PORT=4010
+    networks:
+      - mock-network
+    restart: unless-stopped
+
+  billing-system:
+    image: stoplight/prism:4
+    container_name: mock-billing-system
+    command: mock -h 0.0.0.0 -p 4011 /tmp/openapi.yaml
+    ports:
+      - "4011:4011"
+    volumes:
+      - ./billing-system/openapi.yaml:/tmp/openapi.yaml:ro
+    networks:
+      - mock-network
+    restart: unless-stopped
+
+  network-management:
+    image: stoplight/prism:4
+    container_name: mock-network-management
+    command: mock -h 0.0.0.0 -p 4012 /tmp/openapi.yaml
+    ports:
+      - "4012:4012"
+    volumes:
+      - ./network-management/openapi.yaml:/tmp/openapi.yaml:ro
+    networks:
+      - mock-network
+    restart: unless-stopped
+
+  geolocation:
+    image: stoplight/prism:4
+    container_name: mock-geolocation
+    command: mock -h 0.0.0.0 -p 4013 /tmp/openapi.yaml
+    ports:
+      - "4013:4013"
+    volumes:
+      - ./geolocation/openapi.yaml:/tmp/openapi.yaml:ro
+    networks:
+      - mock-network
+    restart: unless-stopped
+
+networks:
+  mock-network:
+    driver: bridge
+
+# Usage:
+# Start all mocks:       docker-compose up
+# Start in background:   docker-compose up -d
+# Stop all mocks:        docker-compose down
+# View logs:             docker-compose logs -f
+# Restart specific:      docker-compose restart telecom-crm

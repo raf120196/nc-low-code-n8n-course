@@ -29,3 +29,15 @@ n8n_data/
 
 # Logs
 *.log
+
+# ----------------------
+# Student Projects
+# ----------------------
+# Students should submit their projects as ZIP files
+# Don't commit individual student work to main repo
+final_project_submissions/
+student_projects/
+
+# Test data that students generate
+**/test-results/
+**/execution-logs/

@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: Telecom CRM API
+  description: |
+    Mock API for customer relationship management operations in a telecommunications context.
+    
+    ## Error Triggers
+    Use special values to simulate error scenarios:
+    - `customer_id=error404` → Returns 404 Not Found
+    - `customer_id=error500` → Returns 500 Internal Server Error
+    - `customer_id=timeout` → Delays response 30 seconds
+    - Invalid format (non-alphanumeric) → Returns 400 Bad Request
+  version: 1.0.0
+  contact:
+    name: Course Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:4010
+    description: Local Prism mock server
+
+tags:
+  - name: Customers
+    description: Customer management operations
+  - name: Validation
+    description: Customer validation and verification
+
+paths:
+  /api/v1/customers/{customer_id}:
+    get:
+      tags:
+        - Customers
+      summary: Get customer profile
+      description: Retrieve detailed customer information including account status and personal details
+      operationId: getCustomer
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          description: Unique customer identifier (alphanumeric)
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]+$'
+          examples:
+            valid:
+              value: 'AB123456'
+              summary: Valid customer ID
+            error404:
+              value: 'error404'
+              summary: Trigger 404 error
+            error500:
+              value: 'error500'
+              summary: Trigger 500 error
+            timeout:
+              value: 'timeout'
+              summary: Trigger timeout
+      responses:
+        '200':
+          description: Customer found successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfile'
+              examples:
+                standard:
+                  summary: Standard customer
+                  value:
+                    customer_id: 'AB123456'
+                    name: 'John Doe'
+                    email: 'john.doe@example.com'
+                    phone_number: '+447700900123'
+                    account_status: 'active'
+                    registration_date: '2024-01-15T10:30:00Z'
+                    customer_tier: 'gold'
+                    total_services: 3
+                vip:
+                  summary: VIP customer
+                  value:
+                    customer_id: 'VIP789'
+                    name: 'Alice Premium'
+                    email: 'alice@premium.com'
+                    phone_number: '+447700900456'
+                    account_status: 'active'
+                    registration_date: '2020-06-01T09:00:00Z'
+                    customer_tier: 'platinum'
+                    total_services: 12
+        '400':
+          description: Invalid customer ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Invalid customer_id format. Must be alphanumeric.'
+                code: 'INVALID_FORMAT'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Not Found'
+                message: 'Customer with ID error404 does not exist'
+                code: 'CUSTOMER_NOT_FOUND'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Internal Server Error'
+                message: 'An unexpected error occurred while processing your request'
+                code: 'INTERNAL_ERROR'
+
+  /api/v1/customers:
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      description: Register a new customer in the CRM system
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+            examples:
+              standard:
+                summary: Standard customer creation
+                value:
+                  name: 'Jane Smith'
+                  email: 'jane.smith@example.com'
+                  phone_number: '+447700900789'
+                  id_number: 'CD789012'
+                  address: '123 Main St, London'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCustomerResponse'
+              example:
+                customer_id: 'NEW12345'
+                name: 'Jane Smith'
+                email: 'jane.smith@example.com'
+                phone_number: '+447700900789'
+                account_status: 'pending'
+                registration_date: '2026-02-16T14:30:00Z'
+                message: 'Customer created successfully. Verification email sent.'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Email format is invalid'
+                code: 'INVALID_EMAIL'
+        '409':
+          description: Customer already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Conflict'
+                message: 'Customer with email jane.smith@example.com already exists'
+                code: 'DUPLICATE_CUSTOMER'
+
+  /api/v1/customers/{customer_id}/credit-score:
+    get:
+      tags:
+        - Validation
+      summary: Get customer credit score
+      description: |
+        Retrieve credit score for customer validation purposes.
+        
+        **Special triggers:**
+        - `customer_id` ending in '00' → Returns low score (< 500)
+        - `customer_id` ending in '99' → Returns excellent score (> 800)
+      operationId: getCreditScore
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            good:
+              value: 'AB123456'
+              summary: Good credit score
+            poor:
+              value: 'AB000'
+              summary: Poor credit score (trigger)
+            excellent:
+              value: 'AB999'
+              summary: Excellent score (trigger)
+      responses:
+        '200':
+          description: Credit score retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditScore'
+              examples:
+                good:
+                  summary: Good credit score
+                  value:
+                    customer_id: 'AB123456'
+                    credit_score: 720
+                    score_category: 'good'
+                    last_updated: '2026-02-10T08:00:00Z'
+                    factors:
+                      - 'Payment history: Excellent'
+                      - 'Account age: 3 years'
+                      - 'Credit utilization: 25%'
+                poor:
+                  summary: Poor credit score
+                  value:
+                    customer_id: 'AB000'
+                    credit_score: 420
+                    score_category: 'poor'
+                    last_updated: '2026-02-15T12:00:00Z'
+                    factors:
+                      - 'Payment history: Late payments detected'
+                      - 'Account age: 6 months'
+                      - 'Credit utilization: 85%'
+                excellent:
+                  summary: Excellent credit score
+                  value:
+                    customer_id: 'AB999'
+                    credit_score: 850
+                    score_category: 'excellent'
+                    last_updated: '2026-02-14T10:00:00Z'
+                    factors:
+                      - 'Payment history: Perfect'
+                      - 'Account age: 8 years'
+                      - 'Credit utilization: 10%'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/customers/{customer_id}/blacklist-status:
+    get:
+      tags:
+        - Validation
+      summary: Check customer blacklist status
+      description: |
+        Verify if customer is blacklisted for fraud or compliance reasons.
+        
+        **Special triggers:**
+        - `customer_id` containing 'BLOCKED' → Returns blacklisted
+        - `customer_id` containing 'FRAUD' → Returns blacklisted with fraud flag
+      operationId: getBlacklistStatus
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            clean:
+              value: 'AB123456'
+              summary: Not blacklisted
+            blocked:
+              value: 'BLOCKED123'
+              summary: Blacklisted customer (trigger)
+            fraud:
+              value: 'FRAUD456'
+              summary: Fraud case (trigger)
+      responses:
+        '200':
+          description: Blacklist status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlacklistStatus'
+              examples:
+                clean:
+                  summary: Clean record
+                  value:
+                    customer_id: 'AB123456'
+                    is_blacklisted: false
+                    check_date: '2026-02-16T14:00:00Z'
+                    reason: null
+                blocked:
+                  summary: Blacklisted
+                  value:
+                    customer_id: 'BLOCKED123'
+                    is_blacklisted: true
+                    check_date: '2026-02-16T14:00:00Z'
+                    reason: 'Multiple payment failures'
+                    blocked_since: '2025-11-20T00:00:00Z'
+                fraud:
+                  summary: Fraud case
+                  value:
+                    customer_id: 'FRAUD456'
+                    is_blacklisted: true
+                    check_date: '2026-02-16T14:00:00Z'
+                    reason: 'Suspected fraudulent activity'
+                    blocked_since: '2025-12-05T00:00:00Z'
+                    fraud_flag: true
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    CustomerProfile:
+      type: object
+      required:
+        - customer_id
+        - name
+        - email
+        - account_status
+      properties:
+        customer_id:
+          type: string
+          description: Unique customer identifier
+        name:
+          type: string
+          description: Full name of the customer
+        email:
+          type: string
+          format: email
+          description: Customer email address
+        phone_number:
+          type: string
+          description: Primary phone number
+        account_status:
+          type: string
+          enum: [active, pending, suspended, closed]
+          description: Current account status
+        registration_date:
+          type: string
+          format: date-time
+          description: Date of account registration
+        customer_tier:
+          type: string
+          enum: [standard, silver, gold, platinum]
+          description: Customer loyalty tier
+        total_services:
+          type: integer
+          description: Number of active services
+          minimum: 0
+
+    CreateCustomerRequest:
+      type: object
+      required:
+        - name
+        - email
+        - phone_number
+        - id_number
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        phone_number:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+        id_number:
+          type: string
+          description: National ID or passport number
+        address:
+          type: string
+
+    CreateCustomerResponse:
+      type: object
+      properties:
+        customer_id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone_number:
+          type: string
+        account_status:
+          type: string
+        registration_date:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    CreditScore:
+      type: object
+      required:
+        - customer_id
+        - credit_score
+        - score_category
+      properties:
+        customer_id:
+          type: string
+        credit_score:
+          type: integer
+          minimum: 300
+          maximum: 850
+          description: Credit score value
+        score_category:
+          type: string
+          enum: [poor, fair, good, very_good, excellent]
+        last_updated:
+          type: string
+          format: date-time
+        factors:
+          type: array
+          items:
+            type: string
+          description: Contributing factors to the score
+
+    BlacklistStatus:
+      type: object
+      required:
+        - customer_id
+        - is_blacklisted
+        - check_date
+      properties:
+        customer_id:
+          type: string
+        is_blacklisted:
+          type: boolean
+        check_date:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+        blocked_since:
+          type: string
+          format: date-time
+          nullable: true
+        fraud_flag:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - code
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true

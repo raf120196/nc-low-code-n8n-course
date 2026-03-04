@@ -1,0 +1,779 @@
+openapi: 3.0.3
+info:
+  title: Network Management API
+  description: |
+    Mock API for network operations including SIM provisioning, outage management, roaming, and IoT device management.
+    
+    ## Error Triggers
+    Use special values to simulate error scenarios:
+    - `sim_type=unknown` → Returns 400 Bad Request
+    - `region_id=maintenance` → Returns 503 Service Unavailable
+    - `device_id=error500` → Returns 500 Internal Server Error
+    - More than 10 requests/minute → Returns 429 Too Many Requests
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:4012
+    description: Local Prism mock server
+
+tags:
+  - name: SIM Provisioning
+    description: SIM card activation and provisioning
+  - name: Network Outages
+    description: Network outage monitoring and management
+  - name: Roaming
+    description: Roaming package management
+  - name: IoT Devices
+    description: IoT device telemetry and management
+
+paths:
+  /api/v1/sim/provision:
+    post:
+      tags:
+        - SIM Provisioning
+      summary: Provision new SIM card
+      description: |
+        Reserve phone number and activate SIM card.
+        
+        **Special triggers:**
+        - `sim_type=unknown` → Returns 400 error
+      operationId: provisionSIM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionSIMRequest'
+            examples:
+              physical:
+                summary: Physical SIM
+                value:
+                  customer_id: 'AB123456'
+                  sim_type: 'physical'
+                  plan_id: 'PLAN-UNLIMITED-5G'
+                  iccid: '89440000000123456789'
+              esim:
+                summary: eSIM
+                value:
+                  customer_id: 'AB789012'
+                  sim_type: 'eSIM'
+                  plan_id: 'PLAN-DATA-10GB'
+              invalid:
+                summary: Invalid SIM type (trigger)
+                value:
+                  customer_id: 'AB999999'
+                  sim_type: 'unknown'
+                  plan_id: 'PLAN-TEST'
+      responses:
+        '201':
+          description: SIM provisioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionSIMResponse'
+              examples:
+                physical:
+                  summary: Physical SIM activated
+                  value:
+                    provision_id: 'PROV-2026-12345'
+                    customer_id: 'AB123456'
+                    phone_number: '+447700900123'
+                    iccid: '89440000000123456789'
+                    sim_type: 'physical'
+                    status: 'activated'
+                    activated_at: '2026-02-16T15:00:00Z'
+                    activation_code: 'ACT-ABC123'
+                esim:
+                  summary: eSIM activated
+                  value:
+                    provision_id: 'PROV-2026-12346'
+                    customer_id: 'AB789012'
+                    phone_number: '+447700900456'
+                    iccid: '89440000000987654321'
+                    sim_type: 'eSIM'
+                    status: 'activated'
+                    activated_at: '2026-02-16T15:01:00Z'
+                    activation_code: 'ACT-XYZ789'
+                    qr_code_url: 'https://example.com/esim/qr/ACT-XYZ789'
+        '400':
+          description: Invalid provisioning request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'SIM type unknown is not supported'
+                code: 'INVALID_SIM_TYPE'
+                supported_types: ['physical', 'eSIM']
+        '409':
+          description: SIM already provisioned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/network/outages:
+    get:
+      tags:
+        - Network Outages
+      summary: Get active network outages
+      description: Retrieve list of currently active network outages
+      operationId: getOutages
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, major, minor]
+          description: Filter by severity level
+        - name: region_id
+          in: query
+          schema:
+            type: string
+          description: Filter by region
+      responses:
+        '200':
+          description: Outages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutageList'
+              examples:
+                multiple:
+                  summary: Multiple active outages
+                  value:
+                    total_count: 3
+                    outages:
+                      - outage_id: 'OUT-2026-001'
+                        region_id: 'NORTH-01'
+                        severity: 'critical'
+                        description: 'Fiber cut on Main Street'
+                        affected_services: ['mobile', 'broadband']
+                        started_at: '2026-02-16T12:00:00Z'
+                        estimated_resolution: '2026-02-16T18:00:00Z'
+                        status: 'investigating'
+                      - outage_id: 'OUT-2026-002'
+                        region_id: 'SOUTH-05'
+                        severity: 'major'
+                        description: 'Cell tower power issue'
+                        affected_services: ['mobile']
+                        started_at: '2026-02-16T14:30:00Z'
+                        estimated_resolution: '2026-02-16T16:00:00Z'
+                        status: 'repairing'
+                      - outage_id: 'OUT-2026-003'
+                        region_id: 'EAST-03'
+                        severity: 'minor'
+                        description: 'Reduced capacity due to maintenance'
+                        affected_services: ['broadband']
+                        started_at: '2026-02-16T10:00:00Z'
+                        estimated_resolution: '2026-02-16T22:00:00Z'
+                        status: 'planned_maintenance'
+                empty:
+                  summary: No outages
+                  value:
+                    total_count: 0
+                    outages: []
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/network/outages/{outage_id}/resolve:
+    post:
+      tags:
+        - Network Outages
+      summary: Mark outage as resolved
+      description: Update outage status to resolved
+      operationId: resolveOutage
+      parameters:
+        - name: outage_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolution_notes:
+                  type: string
+                actual_resolution_time:
+                  type: string
+                  format: date-time
+            example:
+              resolution_notes: 'Fiber repaired, all services restored'
+              actual_resolution_time: '2026-02-16T17:45:00Z'
+      responses:
+        '200':
+          description: Outage resolved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  outage_id:
+                    type: string
+                  status:
+                    type: string
+                  resolved_at:
+                    type: string
+                    format: date-time
+              example:
+                outage_id: 'OUT-2026-001'
+                status: 'resolved'
+                resolved_at: '2026-02-16T17:45:00Z'
+        '404':
+          description: Outage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/network/coverage:
+    get:
+      tags:
+        - Network Outages
+      summary: Check network coverage
+      description: Verify network coverage at specific coordinates
+      operationId: checkCoverage
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: Coverage information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageInfo'
+              example:
+                latitude: 51.5074
+                longitude: -0.1278
+                coverage_available: true
+                signal_strength: 'excellent'
+                technology: '5G'
+                nearest_tower_id: 'TOWER-LON-123'
+                distance_to_tower_m: 450
+
+  /api/v1/roaming/activate:
+    post:
+      tags:
+        - Roaming
+      summary: Activate roaming package
+      description: Enable roaming for a phone number in specific country
+      operationId: activateRoaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateRoamingRequest'
+            example:
+              phone_number: '+447700900123'
+              country_code: 'FR'
+              package_id: 'ROAM-EU-7DAY'
+      responses:
+        '200':
+          description: Roaming activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoamingActivationResponse'
+              example:
+                activation_id: 'ROAM-ACT-2026-789'
+                phone_number: '+447700900123'
+                country_code: 'FR'
+                package_id: 'ROAM-EU-7DAY'
+                package_name: 'Europe 7-Day Roaming'
+                data_allowance_mb: 5000
+                calls_minutes: 120
+                sms_count: 50
+                activated_at: '2026-02-16T16:00:00Z'
+                expires_at: '2026-02-23T16:00:00Z'
+                status: 'active'
+        '400':
+          description: Invalid activation request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Phone number or package not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/roaming/deactivate:
+    post:
+      tags:
+        - Roaming
+      summary: Deactivate roaming package
+      description: Disable roaming for a phone number
+      operationId: deactivateRoaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+              properties:
+                phone_number:
+                  type: string
+            example:
+              phone_number: '+447700900123'
+      responses:
+        '200':
+          description: Roaming deactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone_number:
+                    type: string
+                  status:
+                    type: string
+                  deactivated_at:
+                    type: string
+                    format: date-time
+              example:
+                phone_number: '+447700900123'
+                status: 'deactivated'
+                deactivated_at: '2026-02-16T16:30:00Z'
+
+  /api/v1/roaming/{phone_number}/usage:
+    get:
+      tags:
+        - Roaming
+      summary: Get roaming usage
+      description: Retrieve current roaming usage statistics
+      operationId: getRoamingUsage
+      parameters:
+        - name: phone_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoamingUsage'
+              example:
+                phone_number: '+447700900123'
+                country_code: 'FR'
+                package_id: 'ROAM-EU-7DAY'
+                data_used_mb: 1250
+                data_remaining_mb: 3750
+                calls_used_minutes: 45
+                calls_remaining_minutes: 75
+                sms_used: 12
+                sms_remaining: 38
+                last_updated: '2026-02-16T16:45:00Z'
+
+  /api/v1/devices/{device_id}/telemetry:
+    get:
+      tags:
+        - IoT Devices
+      summary: Get device telemetry configuration
+      description: |
+        Retrieve device configuration including geofence and limits.
+        
+        **Special triggers:**
+        - `device_id=error500` → Returns 500 error
+      operationId: getDeviceTelemetry
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            normal:
+              value: 'IMEI-88223344'
+              summary: Normal device
+            error:
+              value: 'error500'
+              summary: Trigger 500 error
+      responses:
+        '200':
+          description: Telemetry configuration retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceTelemetryConfig'
+              example:
+                device_id: 'IMEI-88223344'
+                client_id: 'CORP-CLIENT-001'
+                device_type: 'GPS Tracker'
+                geofence_center_lat: 51.5074
+                geofence_center_long: -0.1278
+                geofence_radius_km: 10
+                data_limit_mb: 500
+                alert_threshold_battery: 20
+                status: 'active'
+                last_seen: '2026-02-16T16:50:00Z'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/devices/{device_id}/throttle:
+    post:
+      tags:
+        - IoT Devices
+      summary: Throttle device data speed
+      description: Reduce data speed when usage limit exceeded
+      operationId: throttleDevice
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                throttle_speed_kbps:
+                  type: integer
+                  description: New maximum speed in Kbps
+                reason:
+                  type: string
+            example:
+              throttle_speed_kbps: 64
+              reason: 'Data limit exceeded'
+      responses:
+        '200':
+          description: Device throttled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                  status:
+                    type: string
+                  throttle_speed_kbps:
+                    type: integer
+                  applied_at:
+                    type: string
+                    format: date-time
+              example:
+                device_id: 'IMEI-88223344'
+                status: 'throttled'
+                throttle_speed_kbps: 64
+                applied_at: '2026-02-16T17:00:00Z'
+
+  /api/v1/devices/{device_id}/command:
+    post:
+      tags:
+        - IoT Devices
+      summary: Send command to device
+      description: Send management command to IoT device
+      operationId: sendDeviceCommand
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - command
+              properties:
+                command:
+                  type: string
+                  enum: [reboot, update_firmware, suspend, resume, locate]
+                parameters:
+                  type: object
+            examples:
+              reboot:
+                summary: Reboot device
+                value:
+                  command: 'reboot'
+              firmware:
+                summary: Update firmware
+                value:
+                  command: 'update_firmware'
+                  parameters:
+                    firmware_version: 'v2.5.1'
+      responses:
+        '202':
+          description: Command accepted and queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  command_id:
+                    type: string
+                  device_id:
+                    type: string
+                  command:
+                    type: string
+                  status:
+                    type: string
+                  queued_at:
+                    type: string
+                    format: date-time
+              example:
+                command_id: 'CMD-2026-555'
+                device_id: 'IMEI-88223344'
+                command: 'reboot'
+                status: 'queued'
+                queued_at: '2026-02-16T17:05:00Z'
+
+components:
+  schemas:
+    ProvisionSIMRequest:
+      type: object
+      required:
+        - customer_id
+        - sim_type
+        - plan_id
+      properties:
+        customer_id:
+          type: string
+        sim_type:
+          type: string
+          enum: [physical, eSIM]
+        plan_id:
+          type: string
+        iccid:
+          type: string
+          description: ICCID for physical SIM (optional, auto-generated if not provided)
+
+    ProvisionSIMResponse:
+      type: object
+      properties:
+        provision_id:
+          type: string
+        customer_id:
+          type: string
+        phone_number:
+          type: string
+        iccid:
+          type: string
+        sim_type:
+          type: string
+        status:
+          type: string
+          enum: [activated, pending, failed]
+        activated_at:
+          type: string
+          format: date-time
+        activation_code:
+          type: string
+        qr_code_url:
+          type: string
+          description: QR code URL for eSIM activation
+
+    OutageList:
+      type: object
+      properties:
+        total_count:
+          type: integer
+        outages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outage'
+
+    Outage:
+      type: object
+      properties:
+        outage_id:
+          type: string
+        region_id:
+          type: string
+        severity:
+          type: string
+          enum: [critical, major, minor]
+        description:
+          type: string
+        affected_services:
+          type: array
+          items:
+            type: string
+        started_at:
+          type: string
+          format: date-time
+        estimated_resolution:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [investigating, repairing, planned_maintenance, resolved]
+
+    CoverageInfo:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        coverage_available:
+          type: boolean
+        signal_strength:
+          type: string
+          enum: [excellent, good, fair, poor, none]
+        technology:
+          type: string
+          enum: ['5G', '4G', '3G', '2G']
+        nearest_tower_id:
+          type: string
+        distance_to_tower_m:
+          type: number
+
+    ActivateRoamingRequest:
+      type: object
+      required:
+        - phone_number
+        - country_code
+        - package_id
+      properties:
+        phone_number:
+          type: string
+        country_code:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        package_id:
+          type: string
+
+    RoamingActivationResponse:
+      type: object
+      properties:
+        activation_id:
+          type: string
+        phone_number:
+          type: string
+        country_code:
+          type: string
+        package_id:
+          type: string
+        package_name:
+          type: string
+        data_allowance_mb:
+          type: integer
+        calls_minutes:
+          type: integer
+        sms_count:
+          type: integer
+        activated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    RoamingUsage:
+      type: object
+      properties:
+        phone_number:
+          type: string
+        country_code:
+          type: string
+        package_id:
+          type: string
+        data_used_mb:
+          type: integer
+        data_remaining_mb:
+          type: integer
+        calls_used_minutes:
+          type: integer
+        calls_remaining_minutes:
+          type: integer
+        sms_used:
+          type: integer
+        sms_remaining:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
+
+    DeviceTelemetryConfig:
+      type: object
+      properties:
+        device_id:
+          type: string
+        client_id:
+          type: string
+        device_type:
+          type: string
+        geofence_center_lat:
+          type: number
+          format: double
+        geofence_center_long:
+          type: number
+          format: double
+        geofence_radius_km:
+          type: integer
+        data_limit_mb:
+          type: integer
+        alert_threshold_battery:
+          type: integer
+        status:
+          type: string
+        last_seen:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - code
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        supported_types:
+          type: array
+          items:
+            type: string

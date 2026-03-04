@@ -1,0 +1,589 @@
+openapi: 3.0.3
+info:
+  title: Geolocation & Enrichment API
+  description: |
+    Mock API for geographic data lookup, region information, company data enrichment, and roaming partner information.
+    
+    ## Error Triggers
+    Use special values to simulate error scenarios:
+    - `region_id=error404` → Returns 404 Not Found
+    - `country_code=XX` → Returns 404 Not Found (unsupported country)
+    - `company_name` with special chars → Returns 400 Bad Request
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:4013
+    description: Local Prism mock server
+
+tags:
+  - name: Geographic Data
+    description: Location and geographic information
+  - name: Company Data
+    description: Company information enrichment
+  - name: Roaming Partners
+    description: International roaming partner information
+
+paths:
+  /api/v1/geo/lookup:
+    get:
+      tags:
+        - Geographic Data
+      summary: Geographic data lookup
+      description: |
+        Get geographic information by IP address, coordinates, or zip code.
+        
+        Query parameters are mutually exclusive (use one):
+        - ip: Lookup by IP address
+        - zip: Lookup by postal code
+        - coordinates: Lookup by lat/long
+      operationId: geoLookup
+      parameters:
+        - name: ip
+          in: query
+          schema:
+            type: string
+          description: IP address to lookup
+          example: '8.8.8.8'
+        - name: zip
+          in: query
+          schema:
+            type: string
+          description: Postal/ZIP code
+          example: '10111'
+        - name: latitude
+          in: query
+          schema:
+            type: number
+            format: double
+          description: Latitude coordinate
+        - name: longitude
+          in: query
+          schema:
+            type: number
+            format: double
+          description: Longitude coordinate
+      responses:
+        '200':
+          description: Geographic data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoData'
+              examples:
+                by_zip:
+                  summary: Lookup by ZIP code
+                  value:
+                    zip_code: '10111'
+                    city: 'Tech City'
+                    state: 'California'
+                    country: 'USA'
+                    country_code: 'US'
+                    latitude: 37.7749
+                    longitude: -122.4194
+                    timezone: 'America/Los_Angeles'
+                    nearest_hub_id: 'HUB-CA-SF-01'
+                    infrastructure_type: 'fiber'
+                    coverage_available: true
+                by_ip:
+                  summary: Lookup by IP
+                  value:
+                    ip_address: '8.8.8.8'
+                    city: 'Mountain View'
+                    state: 'California'
+                    country: 'USA'
+                    country_code: 'US'
+                    latitude: 37.4056
+                    longitude: -122.0775
+                    timezone: 'America/Los_Angeles'
+                    isp: 'Google LLC'
+                by_coordinates:
+                  summary: Lookup by coordinates
+                  value:
+                    latitude: 51.5074
+                    longitude: -0.1278
+                    city: 'London'
+                    country: 'United Kingdom'
+                    country_code: 'GB'
+                    timezone: 'Europe/London'
+                    nearest_hub_id: 'HUB-GB-LON-01'
+                    infrastructure_type: 'fiber'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'No valid lookup parameter provided. Use ip, zip, or coordinates.'
+                code: 'MISSING_LOOKUP_PARAM'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Not Found'
+                message: 'No data found for provided location'
+                code: 'LOCATION_NOT_FOUND'
+
+  /api/v1/region/{region_id}/info:
+    get:
+      tags:
+        - Geographic Data
+      summary: Get region information
+      description: |
+        Retrieve detailed information about a network region.
+        
+        **Special triggers:**
+        - `region_id=error404` → Returns 404 error
+        - `region_id=maintenance` → Returns 503 error
+      operationId: getRegionInfo
+      parameters:
+        - name: region_id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            normal:
+              value: 'NORTH-01'
+              summary: Normal region
+            not_found:
+              value: 'error404'
+              summary: Trigger 404 error
+            maintenance:
+              value: 'maintenance'
+              summary: Trigger 503 error
+      responses:
+        '200':
+          description: Region information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionInfo'
+              examples:
+                urban:
+                  summary: Urban region
+                  value:
+                    region_id: 'NORTH-01'
+                    region_name: 'North District'
+                    region_type: 'urban'
+                    population: 250000
+                    area_km2: 150
+                    critical_infrastructure_count: 12
+                    total_towers: 45
+                    fiber_coverage_percent: 95
+                    local_manager_contact: 'manager.north@telecom.com'
+                    emergency_contact: '+1234567890'
+                    headquarters_address: '100 Main St, North City'
+                rural:
+                  summary: Rural region
+                  value:
+                    region_id: 'SOUTH-05'
+                    region_name: 'South Rural Area'
+                    region_type: 'rural'
+                    population: 45000
+                    area_km2: 800
+                    critical_infrastructure_count: 3
+                    total_towers: 15
+                    fiber_coverage_percent: 35
+                    local_manager_contact: 'manager.south@telecom.com'
+                    emergency_contact: '+1234567891'
+                    headquarters_address: 'Rural Office, South Village'
+        '404':
+          description: Region not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Not Found'
+                message: 'Region error404 does not exist'
+                code: 'REGION_NOT_FOUND'
+        '503':
+          description: Service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Service Unavailable'
+                message: 'Region maintenance is currently under maintenance. Please try again later.'
+                code: 'REGION_MAINTENANCE'
+
+  /api/v1/company/{company_name}/data:
+    get:
+      tags:
+        - Company Data
+      summary: Get company data enrichment
+      description: |
+        Retrieve enriched information about a company for B2B lead qualification.
+        
+        **Note:** Company name should be URL-encoded if it contains spaces or special characters.
+      operationId: getCompanyData
+      parameters:
+        - name: company_name
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            enterprise:
+              value: 'TechCorp Solutions'
+              summary: Enterprise company
+            startup:
+              value: 'StartupXYZ'
+              summary: Small startup
+            mid_market:
+              value: 'MidMarket Corp'
+              summary: Mid-market company
+      responses:
+        '200':
+          description: Company data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyData'
+              examples:
+                enterprise:
+                  summary: Enterprise company
+                  value:
+                    company_name: 'TechCorp Solutions'
+                    industry: 'Technology'
+                    company_size: 'enterprise'
+                    employee_count: 5000
+                    revenue_tier: 'high'
+                    estimated_annual_revenue_usd: 500000000
+                    headquarters_location: 'San Francisco, CA, USA'
+                    founded_year: 2005
+                    stock_symbol: 'TECH'
+                    website: 'https://techcorp.example.com'
+                    linkedin_url: 'https://linkedin.com/company/techcorp'
+                    technologies_used: ['AWS', 'Kubernetes', 'React', 'Python']
+                    data_last_updated: '2026-02-15T00:00:00Z'
+                startup:
+                  summary: Startup company
+                  value:
+                    company_name: 'StartupXYZ'
+                    industry: 'SaaS'
+                    company_size: 'small'
+                    employee_count: 25
+                    revenue_tier: 'low'
+                    estimated_annual_revenue_usd: 1500000
+                    headquarters_location: 'Austin, TX, USA'
+                    founded_year: 2023
+                    stock_symbol: null
+                    website: 'https://startupxyz.example.com'
+                    linkedin_url: 'https://linkedin.com/company/startupxyz'
+                    technologies_used: ['Node.js', 'MongoDB', 'React']
+                    funding_stage: 'Seed'
+                    data_last_updated: '2026-02-10T00:00:00Z'
+                mid_market:
+                  summary: Mid-market company
+                  value:
+                    company_name: 'MidMarket Corp'
+                    industry: 'Manufacturing'
+                    company_size: 'mid-market'
+                    employee_count: 450
+                    revenue_tier: 'medium'
+                    estimated_annual_revenue_usd: 50000000
+                    headquarters_location: 'Chicago, IL, USA'
+                    founded_year: 2010
+                    website: 'https://midmarket.example.com'
+                    data_last_updated: '2026-02-12T00:00:00Z'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Not Found'
+                message: 'No data available for company: UnknownCompany'
+                code: 'COMPANY_NOT_FOUND'
+        '400':
+          description: Invalid company name format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Invalid company name format'
+                code: 'INVALID_COMPANY_NAME'
+
+  /api/v1/roaming/partners:
+    get:
+      tags:
+        - Roaming Partners
+      summary: Get roaming partners by country
+      description: |
+        Retrieve list of roaming partner networks for a specific country.
+        
+        **Special triggers:**
+        - `country_code=XX` → Returns 404 (unsupported country)
+      operationId: getRoamingPartners
+      parameters:
+        - name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2 country code
+          examples:
+            france:
+              value: 'FR'
+              summary: France
+            germany:
+              value: 'DE'
+              summary: Germany
+            unsupported:
+              value: 'XX'
+              summary: Unsupported country (trigger)
+      responses:
+        '200':
+          description: Roaming partners retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoamingPartners'
+              examples:
+                france:
+                  summary: France roaming partners
+                  value:
+                    country_code: 'FR'
+                    country_name: 'France'
+                    partners:
+                      - partner_id: 'ORANGE-FR'
+                        partner_network_name: 'Orange France'
+                        network_type: '5G'
+                        quality_rating: 4.5
+                        coverage_percent: 98
+                      - partner_id: 'SFR-FR'
+                        partner_network_name: 'SFR'
+                        network_type: '5G'
+                        quality_rating: 4.2
+                        coverage_percent: 95
+                      - partner_id: 'BOUYGUES-FR'
+                        partner_network_name: 'Bouygues Telecom'
+                        network_type: '4G/5G'
+                        quality_rating: 4.0
+                        coverage_percent: 92
+                    current_exchange_rate: 0.92
+                    currency: 'EUR'
+                    average_daily_rate_usd: 8.50
+                germany:
+                  summary: Germany roaming partners
+                  value:
+                    country_code: 'DE'
+                    country_name: 'Germany'
+                    partners:
+                      - partner_id: 'TELEKOM-DE'
+                        partner_network_name: 'Deutsche Telekom'
+                        network_type: '5G'
+                        quality_rating: 4.7
+                        coverage_percent: 99
+                      - partner_id: 'VODAFONE-DE'
+                        partner_network_name: 'Vodafone Germany'
+                        network_type: '5G'
+                        quality_rating: 4.4
+                        coverage_percent: 97
+                    current_exchange_rate: 0.92
+                    currency: 'EUR'
+                    average_daily_rate_usd: 9.00
+        '404':
+          description: Country not supported for roaming
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Not Found'
+                message: 'Roaming is not available in country XX'
+                code: 'COUNTRY_NOT_SUPPORTED'
+        '400':
+          description: Invalid country code format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Country code must be 2-letter ISO code'
+                code: 'INVALID_COUNTRY_CODE'
+
+components:
+  schemas:
+    GeoData:
+      type: object
+      properties:
+        zip_code:
+          type: string
+        ip_address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        country_code:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        timezone:
+          type: string
+        nearest_hub_id:
+          type: string
+        infrastructure_type:
+          type: string
+          enum: [fiber, copper, wireless, hybrid]
+        coverage_available:
+          type: boolean
+        isp:
+          type: string
+
+    RegionInfo:
+      type: object
+      required:
+        - region_id
+        - region_name
+      properties:
+        region_id:
+          type: string
+        region_name:
+          type: string
+        region_type:
+          type: string
+          enum: [urban, suburban, rural]
+        population:
+          type: integer
+        area_km2:
+          type: number
+        critical_infrastructure_count:
+          type: integer
+          description: Number of critical network infrastructure points
+        total_towers:
+          type: integer
+        fiber_coverage_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        local_manager_contact:
+          type: string
+          format: email
+        emergency_contact:
+          type: string
+        headquarters_address:
+          type: string
+
+    CompanyData:
+      type: object
+      required:
+        - company_name
+        - industry
+        - company_size
+      properties:
+        company_name:
+          type: string
+        industry:
+          type: string
+          description: Primary industry sector
+        company_size:
+          type: string
+          enum: [small, mid-market, enterprise]
+        employee_count:
+          type: integer
+        revenue_tier:
+          type: string
+          enum: [low, medium, high]
+        estimated_annual_revenue_usd:
+          type: integer
+        headquarters_location:
+          type: string
+        founded_year:
+          type: integer
+        stock_symbol:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+        linkedin_url:
+          type: string
+          format: uri
+        technologies_used:
+          type: array
+          items:
+            type: string
+        funding_stage:
+          type: string
+          enum: [Bootstrap, Seed, Series A, Series B, Series C, Series D+, IPO]
+        data_last_updated:
+          type: string
+          format: date-time
+
+    RoamingPartners:
+      type: object
+      required:
+        - country_code
+        - country_name
+        - partners
+      properties:
+        country_code:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        country_name:
+          type: string
+        partners:
+          type: array
+          items:
+            type: object
+            properties:
+              partner_id:
+                type: string
+              partner_network_name:
+                type: string
+              network_type:
+                type: string
+                enum: ['2G', '3G', '4G', '5G', '4G/5G']
+              quality_rating:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 5
+              coverage_percent:
+                type: integer
+                minimum: 0
+                maximum: 100
+        current_exchange_rate:
+          type: number
+          format: double
+          description: Exchange rate to USD
+        currency:
+          type: string
+        average_daily_rate_usd:
+          type: number
+          format: double
+          description: Average cost per day in USD
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - code
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string

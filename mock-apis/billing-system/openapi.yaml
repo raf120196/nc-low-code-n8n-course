@@ -1,0 +1,609 @@
+openapi: 3.0.3
+info:
+  title: Billing System API
+  description: |
+    Mock API for billing operations including account management, payments, and balance operations.
+    
+    ## Error Triggers
+    Use special values to simulate error scenarios:
+    - `account_id=insufficient` → Returns 402 Payment Required (insufficient funds)
+    - `account_id=error500` → Returns 500 Internal Server Error
+    - `amount > 10000` → Returns 400 Bad Request (exceeds limit)
+    - `payment_method=invalid` → Returns 400 Bad Request
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:4011
+    description: Local Prism mock server
+
+tags:
+  - name: Accounts
+    description: Billing account management
+  - name: Payments
+    description: Payment processing operations
+  - name: Balance
+    description: Balance and transaction operations
+
+paths:
+  /api/v1/accounts:
+    post:
+      tags:
+        - Accounts
+      summary: Create billing account
+      description: Create a new billing account for a customer
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+            examples:
+              prepaid:
+                summary: Prepaid account
+                value:
+                  customer_id: 'AB123456'
+                  account_type: 'prepaid'
+                  currency: 'USD'
+                  initial_balance: 50.00
+              postpaid:
+                summary: Postpaid account
+                value:
+                  customer_id: 'AB789012'
+                  account_type: 'postpaid'
+                  currency: 'USD'
+                  credit_limit: 200.00
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+              examples:
+                prepaid:
+                  summary: Prepaid account created
+                  value:
+                    account_id: 'ACC-2026-001'
+                    customer_id: 'AB123456'
+                    account_type: 'prepaid'
+                    currency: 'USD'
+                    balance: 50.00
+                    status: 'active'
+                    created_at: '2026-02-16T14:00:00Z'
+                postpaid:
+                  summary: Postpaid account created
+                  value:
+                    account_id: 'ACC-2026-002'
+                    customer_id: 'AB789012'
+                    account_type: 'postpaid'
+                    currency: 'USD'
+                    balance: 0.00
+                    credit_limit: 200.00
+                    status: 'active'
+                    created_at: '2026-02-16T14:00:00Z'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Invalid account_type. Must be prepaid or postpaid'
+                code: 'INVALID_ACCOUNT_TYPE'
+        '409':
+          description: Account already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Conflict'
+                message: 'Customer AB123456 already has an active billing account'
+                code: 'DUPLICATE_ACCOUNT'
+
+  /api/v1/accounts/{account_id}/balance:
+    get:
+      tags:
+        - Balance
+      summary: Get account balance
+      description: |
+        Retrieve current balance and transaction history for an account.
+        
+        **Special triggers:**
+        - `account_id=insufficient` → Returns very low balance
+      operationId: getBalance
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            normal:
+              value: 'ACC-2026-001'
+              summary: Normal balance
+            insufficient:
+              value: 'insufficient'
+              summary: Insufficient funds (trigger)
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+              examples:
+                sufficient:
+                  summary: Sufficient balance
+                  value:
+                    account_id: 'ACC-2026-001'
+                    customer_id: 'AB123456'
+                    current_balance: 125.50
+                    currency: 'USD'
+                    last_transaction_date: '2026-02-15T10:30:00Z'
+                    pending_charges: 0.00
+                insufficient:
+                  summary: Insufficient balance
+                  value:
+                    account_id: 'insufficient'
+                    customer_id: 'AB999999'
+                    current_balance: 2.50
+                    currency: 'USD'
+                    last_transaction_date: '2026-02-16T08:00:00Z'
+                    pending_charges: 0.00
+                    low_balance_warning: true
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/accounts/{account_id}/charge:
+    post:
+      tags:
+        - Balance
+      summary: Charge account
+      description: |
+        Deduct amount from account balance.
+        
+        **Special triggers:**
+        - `account_id=insufficient` → Returns 402 Payment Required
+        - `amount > 10000` → Returns 400 Bad Request (exceeds limit)
+      operationId: chargeAccount
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeRequest'
+            examples:
+              normal:
+                summary: Normal charge
+                value:
+                  amount: 25.00
+                  description: 'Monthly subscription fee'
+                  reference_id: 'SUB-2026-02'
+              large:
+                summary: Large charge (will fail)
+                value:
+                  amount: 15000.00
+                  description: 'Large amount'
+                  reference_id: 'TEST-001'
+      responses:
+        '200':
+          description: Charge successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+              example:
+                transaction_id: 'TXN-2026-12345'
+                account_id: 'ACC-2026-001'
+                amount: -25.00
+                description: 'Monthly subscription fee'
+                new_balance: 100.50
+                timestamp: '2026-02-16T14:30:00Z'
+                status: 'completed'
+        '400':
+          description: Invalid charge amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Bad Request'
+                message: 'Charge amount 15000.00 exceeds maximum limit of 10000.00'
+                code: 'AMOUNT_EXCEEDS_LIMIT'
+        '402':
+          description: Insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'Payment Required'
+                message: 'Insufficient balance to complete charge. Current balance: 2.50, Required: 25.00'
+                code: 'INSUFFICIENT_FUNDS'
+                current_balance: 2.50
+                required_amount: 25.00
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/payments:
+    post:
+      tags:
+        - Payments
+      summary: Process payment
+      description: |
+        Process a payment and credit the account.
+        
+        **Special triggers:**
+        - `payment_method=invalid` → Returns 400 Bad Request
+        - `card_number` ending in '0000' → Returns declined
+      operationId: processPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            examples:
+              card:
+                summary: Credit card payment
+                value:
+                  account_id: 'ACC-2026-001'
+                  amount: 50.00
+                  payment_method: 'credit_card'
+                  card_number: '4111111111111111'
+                  card_expiry: '12/27'
+                  cvv: '123'
+              invalid:
+                summary: Invalid payment method (trigger)
+                value:
+                  account_id: 'ACC-2026-001'
+                  amount: 50.00
+                  payment_method: 'invalid'
+      responses:
+        '200':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                payment_id: 'PAY-2026-67890'
+                transaction_id: 'TXN-2026-67891'
+                account_id: 'ACC-2026-001'
+                amount: 50.00
+                payment_method: 'credit_card'
+                status: 'completed'
+                processed_at: '2026-02-16T15:00:00Z'
+                confirmation_code: 'CONF-ABC123'
+        '400':
+          description: Invalid payment request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_method:
+                  summary: Invalid payment method
+                  value:
+                    error: 'Bad Request'
+                    message: 'Payment method invalid is not supported'
+                    code: 'INVALID_PAYMENT_METHOD'
+                    supported_methods: ['credit_card', 'debit_card', 'bank_transfer']
+                declined:
+                  summary: Payment declined
+                  value:
+                    error: 'Bad Request'
+                    message: 'Payment declined by payment processor'
+                    code: 'PAYMENT_DECLINED'
+                    reason: 'Insufficient funds'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/accounts/{account_id}/transactions:
+    get:
+      tags:
+        - Balance
+      summary: Get transaction history
+      description: Retrieve transaction history for an account
+      operationId: getTransactions
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionList'
+              example:
+                account_id: 'ACC-2026-001'
+                total_count: 45
+                limit: 10
+                offset: 0
+                transactions:
+                  - transaction_id: 'TXN-2026-12345'
+                    type: 'charge'
+                    amount: -25.00
+                    description: 'Monthly subscription'
+                    balance_after: 100.50
+                    timestamp: '2026-02-16T14:30:00Z'
+                  - transaction_id: 'TXN-2026-12344'
+                    type: 'payment'
+                    amount: 50.00
+                    description: 'Top-up via credit card'
+                    balance_after: 125.50
+                    timestamp: '2026-02-15T10:30:00Z'
+                  - transaction_id: 'TXN-2026-12343'
+                    type: 'charge'
+                    amount: -15.00
+                    description: 'Data usage'
+                    balance_after: 75.50
+                    timestamp: '2026-02-14T18:45:00Z'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    CreateAccountRequest:
+      type: object
+      required:
+        - customer_id
+        - account_type
+        - currency
+      properties:
+        customer_id:
+          type: string
+        account_type:
+          type: string
+          enum: [prepaid, postpaid]
+        currency:
+          type: string
+          enum: [USD, EUR, GBP]
+          default: USD
+        initial_balance:
+          type: number
+          format: double
+          minimum: 0
+          description: Initial balance (for prepaid accounts)
+        credit_limit:
+          type: number
+          format: double
+          minimum: 0
+          description: Credit limit (for postpaid accounts)
+
+    Account:
+      type: object
+      properties:
+        account_id:
+          type: string
+        customer_id:
+          type: string
+        account_type:
+          type: string
+        currency:
+          type: string
+        balance:
+          type: number
+          format: double
+        credit_limit:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [active, suspended, closed]
+        created_at:
+          type: string
+          format: date-time
+
+    BalanceResponse:
+      type: object
+      properties:
+        account_id:
+          type: string
+        customer_id:
+          type: string
+        current_balance:
+          type: number
+          format: double
+        currency:
+          type: string
+        last_transaction_date:
+          type: string
+          format: date-time
+        pending_charges:
+          type: number
+          format: double
+        low_balance_warning:
+          type: boolean
+
+    ChargeRequest:
+      type: object
+      required:
+        - amount
+        - description
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          maximum: 10000
+        description:
+          type: string
+          maxLength: 200
+        reference_id:
+          type: string
+
+    TransactionResponse:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+        account_id:
+          type: string
+        amount:
+          type: number
+          format: double
+          description: Positive for credits, negative for charges
+        description:
+          type: string
+        new_balance:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [completed, pending, failed]
+
+    PaymentRequest:
+      type: object
+      required:
+        - account_id
+        - amount
+        - payment_method
+      properties:
+        account_id:
+          type: string
+        amount:
+          type: number
+          format: double
+          minimum: 1.00
+        payment_method:
+          type: string
+          enum: [credit_card, debit_card, bank_transfer]
+        card_number:
+          type: string
+          pattern: '^\d{16}$'
+        card_expiry:
+          type: string
+          pattern: '^\d{2}/\d{2}$'
+        cvv:
+          type: string
+          pattern: '^\d{3,4}$'
+        bank_account_number:
+          type: string
+
+    PaymentResponse:
+      type: object
+      properties:
+        payment_id:
+          type: string
+        transaction_id:
+          type: string
+        account_id:
+          type: string
+        amount:
+          type: number
+          format: double
+        payment_method:
+          type: string
+        status:
+          type: string
+          enum: [completed, pending, declined, failed]
+        processed_at:
+          type: string
+          format: date-time
+        confirmation_code:
+          type: string
+
+    TransactionList:
+      type: object
+      properties:
+        account_id:
+          type: string
+        total_count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              transaction_id:
+                type: string
+              type:
+                type: string
+                enum: [charge, payment, refund, adjustment]
+              amount:
+                type: number
+                format: double
+              description:
+                type: string
+              balance_after:
+                type: number
+                format: double
+              timestamp:
+                type: string
+                format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - code
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        current_balance:
+          type: number
+          format: double
+        required_amount:
+          type: number
+          format: double
+        supported_methods:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
