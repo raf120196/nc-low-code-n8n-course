@@ -6,8 +6,7 @@ It is necessary to design, implement, and document a **production-ready automate
 
 This project requires you to demonstrate all learned skills: workflow design, data manipulation, external API integration, error handling, database operations, and comprehensive documentation.
 
-**Timeline:** 4-6 weeks (flexible)
-**Expected effort:** 60-80 hours
+**Timeline:** 4-6 weeks
 
 ---
 

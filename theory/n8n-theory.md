@@ -79,7 +79,7 @@ n8n processes data as an array of objects. Each object in the array represents o
 # Chapter 3: External APIs & Messaging
 
 ## Overview
-This week focuses on connecting n8n to the outside world using REST APIs and messaging platforms like Telegram. You will learn how to fetch data from external services and send automated messages.
+This chapter focuses on connecting n8n to the outside world using REST APIs and messaging platforms like Telegram. You will learn how to fetch data from external services and send automated messages.
 
 ## 1. REST API Basics
 REST (Representational State Transfer) is the standard way for web services to communicate.
@@ -120,7 +120,7 @@ Telegram is a popular platform for building bots. In n8n, you can use the **Tele
 # Chapter 4: Data Persistence (Databases & Sheets)
 
 ## Overview
-Automations often need to store and retrieve data. This week, we explore how to use external storage solutions like PostgreSQL databases and Google Sheets to maintain state and persist information.
+Automations often need to store and retrieve data. This chapter, we explore how to use external storage solutions like PostgreSQL databases and Google Sheets to maintain state and persist information.
 
 ## 1. Relational Databases (PostgreSQL)
 PostgreSQL is a powerful, open-source relational database.
@@ -154,7 +154,7 @@ n8n provides dedicated nodes for various databases:
 # Chapter 5: Error Handling & Advanced Logic
 
 ## Overview
-Even the best-designed workflows can fail. This week, you will learn how to make your automations resilient by implementing error handling, retries, and modular logic using sub-workflows.
+Even the best-designed workflows can fail. This chapter, you will learn how to make your automations resilient by implementing error handling, retries, and modular logic using sub-workflows.
 
 ## 1. Error Handling in n8n
 - **Error Trigger Node:** A special trigger that fires whenever another workflow fails. It provides details about the error (node name, error message, etc.).
@@ -184,7 +184,7 @@ Even the best-designed workflows can fail. This week, you will learn how to make
 # Chapter 6: File Processing & Web Scraping
 
 ## Overview
-Automations often involve more than just JSON data. This week, we dive into handling files (binary data) and extracting information from websites (web scraping).
+Automations often involve more than just JSON data. This chapter, we dive into handling files (binary data) and extracting information from websites (web scraping).
 
 ## 1. Binary Data in n8n
 Binary data refers to files like images, PDFs, spreadsheets, and documents.

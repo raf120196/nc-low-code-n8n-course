@@ -33,17 +33,17 @@ The course focuses on:
 
 **Course Structure:**
 
-- **6 weeks of theory and exercises** (in `theory/` and `exercises/` folders)
-- **Final project** (4-6 weeks): Build a production-ready telecom automation system
+- **Theory** (in `theory/` folder)
+- **Project** (for 4-6 weeks): Build a production-ready telecom automation system
 - **Mock APIs** for local testing without external dependencies
 
-Ready-made example workflows are stored in the `workflows` directory and can be imported into your own n8n instance for learning and experimentation.
+Ready-made example workflow is stored in the `workflows` directory and can be imported into your own n8n instance for learning and experimentation.
 
 ---
 
 ## Install Podman
 
-### Windows (WSL2)
+### If you are Windows OS user
 
 1. Install WSL2:
 
@@ -71,7 +71,7 @@ podman-compose --version
 
 ---
 
-### Linux
+### If you are Linux OS user
 
 ```bash
 sudo apt update
@@ -261,13 +261,12 @@ podman logs postgres
 
 - Always run **Git inside WSL/Ubuntu**, not native Windows Git.
 - Never commit `.env` with real credentials; use `.env.example` for version control.
-- Work on exercises in the `exercises/` folder and final project in `final_project/`.
 
 ---
 
 ## Final Project
 
-After completing the 6-week course, you'll build a comprehensive final project demonstrating all learned skills.
+After completing the course, you'll build a comprehensive final project demonstrating all learned skills.
 
 **Requirements:**
 - 20-25 nodes across main workflow and sub-workflows
@@ -276,16 +275,11 @@ After completing the 6-week course, you'll build a comprehensive final project d
 - State machine with 4+ statuses
 - Comprehensive documentation and testing
 
-**See:** [`final_project/README.md`](final_project/README.md) for complete specifications.
+**See:** [`project/README.md`](project/README.md) for complete specifications.
 
 **Available Project Topics:**
 1. SIM Card Purchase & Activation System
 2. Home Internet/TV Provisioning System
-3. Telecom Support Bot with Smart Routing
-4. Network Outage Monitor & Alert System
-5. Automated Roaming Package Activation
-6. B2B Lead Management & Qualification System
-7. IoT Device Fleet Management System
 
 ---
 
